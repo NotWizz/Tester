@@ -11,13 +11,15 @@ BUTTON_COLOR = (0, 122, 204)
 HIGHLIGHT_COLOR = (0, 149, 0)
 EXIT_HIGHLIGHT_COLOR = (255, 20, 20)
 SELECTED_COLOR = (34, 139, 34)
+READING_SELECTED_COLOR = (0, 0, 255)
+GRAMMAR_SELECTED_TEXT = (255, 255, 0)
 TEXT_COLOR = (255, 255, 255)
 FONT_SIZE = 24
 FONT_SIZE_2 = 36
 SCROLL_COLOR = (220, 220, 220)
 SCROLL_SPEED = 5
 
-VOCABULARY_1 = {
+VOCABULARY_1= {
     "noha": "leg",
     "sliepka": "chicken",
     "šťastný": "delighted",
@@ -50,7 +52,7 @@ VOCABULARY_1 = {
     "tráva": "grass",
 }
 
-VOCABULARY_2 = {
+VOCABULARY_2= {
     "noha": "leg",
     "sliepka": "chicken",
     "šťastný": "delighted",
@@ -82,10 +84,12 @@ VOCABULARY_2 = {
     "krab": "crab",
     "tráva": "grass",
 }
+
 
 screen = pygame.display.set_mode((800, 600), RESIZABLE)
 WINDOW_WIDTH, WINDOW_HEIGHT = screen.get_size()
 pygame.display.set_caption("Main Menu")
+
 
 font = pygame.font.Font(None, FONT_SIZE)
 font_hedings = pygame.font.Font(None, FONT_SIZE_2)
@@ -110,7 +114,7 @@ recalculate_buttons()
 
 def render_button_text(text, font, button_rect, font_hedings):
     if text in ("LESSON 1", "LESSON 2", "MAIN MENU"):
-        text_surface = font_hedings.render(text, True, (0, 0, 0))
+        text_surface = font_hedings.render(text, True, (0,0,0))
     else:
         text_surface = font.render(text, True, TEXT_COLOR)
 
@@ -126,7 +130,7 @@ def draw_button(screen, text, font, button_rect, is_hovered):
     else:
         color = HIGHLIGHT_COLOR if is_hovered else BUTTON_COLOR
 
-    pygame.draw.rect(screen, color, button_rect)
+    pygame.draw.rect(screen, color, button_rect, border_radius=2)
     text_surface, text_rect = render_button_text(text, font, button_rect, font_hedings)
     screen.blit(text_surface, text_rect)
 
@@ -148,7 +152,6 @@ def lesson_1_menu():
                 screen = pygame.display.set_mode((event.w, event.h), RESIZABLE)
                 recalculate_buttons()
 
-
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     button_released = True
@@ -161,14 +164,14 @@ def lesson_1_menu():
 
         lesson_buttons = {
             "LESSON 1": (
-                WINDOW_WIDTH // 2 - button_width // 2, WINDOW_HEIGHT // 2 - 4 * button_height - button_spacing),
+            WINDOW_WIDTH // 2 - button_width // 2, WINDOW_HEIGHT // 2 - 4 * button_height - button_spacing),
             "Vocabulary": (
-                WINDOW_WIDTH // 2 - button_width // 2, WINDOW_HEIGHT // 2 - 1.5 * button_height - button_spacing),
+            WINDOW_WIDTH // 2 - button_width // 2, WINDOW_HEIGHT // 2 - 1.5 * button_height - button_spacing),
             "Reading": (WINDOW_WIDTH // 2 - button_width // 2, WINDOW_HEIGHT // 2 - 0.5 * button_height),
             "Grammar": (
-                WINDOW_WIDTH // 2 - button_width // 2, WINDOW_HEIGHT // 2 + 0.5 * button_height + button_spacing),
+            WINDOW_WIDTH // 2 - button_width // 2, WINDOW_HEIGHT // 2 + 0.5 * button_height + button_spacing),
             "Exit": (
-                WINDOW_WIDTH // 2 - button_width // 2, WINDOW_HEIGHT // 2 + 1.5 * button_height + 2 * button_spacing)
+            WINDOW_WIDTH // 2 - button_width // 2, WINDOW_HEIGHT // 2 + 1.5 * button_height + 2 * button_spacing)
         }
 
         for button_text, position in lesson_buttons.items():
@@ -211,6 +214,9 @@ def vocabulary_1_section():
     user_inputs = {word: "" for word in VOCABULARY_1}
     vocab_height = len(VOCABULARY_1) * (FONT_SIZE + 20)
     active_input = None
+    checked = False
+    correct_set = set()
+    moved = {word: False for word in VOCABULARY_1.keys()}
 
     while running:
         mouse_pos = pygame.mouse.get_pos()
@@ -239,9 +245,8 @@ def vocabulary_1_section():
                 else:
                     active_input = None
 
-
-
             elif event.type == KEYDOWN and active_input is not None:
+                moved[active_input] = True
                 if event.key == K_BACKSPACE:
                     user_inputs[active_input] = user_inputs[active_input][:-1]
                 else:
@@ -259,7 +264,7 @@ def vocabulary_1_section():
             input_rect = pygame.Rect(200, y, 200, FONT_SIZE + 10)
             pygame.draw.rect(
                 screen,
-                (255, 255, 0) if active_input == word else (200, 200, 200),
+                (0, 255, 255) if active_input == word else GRAMMAR_SELECTED_TEXT if moved[word] else (200, 200, 200) if not checked else (0, 255, 0) if word in correct_set else (255, 0, 0),
                 input_rect,
             )
 
@@ -277,6 +282,8 @@ def vocabulary_1_section():
         check_text, check_text_rect = render_button_text("Check", font, check_button, font_hedings)
         screen.blit(check_text, check_text_rect)
 
+        screen.blit(font.render(f"Score: {len(correct_set)}/{len(VOCABULARY_1)}", True, (0, 0, 0) if not correct_set else SELECTED_COLOR), (WINDOW_WIDTH - 100, 5))
+
         exit_button = pygame.Rect(20, WINDOW_HEIGHT - 50, 100, 40)
         if exit_button.collidepoint(mouse_pos):
             pygame.draw.rect(screen, EXIT_HIGHLIGHT_COLOR, exit_button)
@@ -287,20 +294,23 @@ def vocabulary_1_section():
 
         if exit_button.collidepoint(mouse_pos) and button_released:
             running = False
-
         if check_button.collidepoint(mouse_pos) and button_released:
+            checked = True
             for word, correct_translation in VOCABULARY_1.items():
                 if user_inputs[word].strip().lower() == correct_translation:
                     print(f"{word}: Correct")
+                    correct_set.add(word)
                 else:
                     print(f"{word}: Incorrect")
+                    correct_set.discard(word)
+                moved[word] = False
 
         pygame.display.flip()
 
 
 def reading_1_section():
     pygame.display.set_caption("Lesson 1 Reading")
-    global screen  # Use the global screen variable
+    global screen
     scroll_y = 0
     running = True
 
@@ -320,6 +330,9 @@ def reading_1_section():
 
     user_answers = [None] * len(questions)
     content_height = len(content) * (FONT_SIZE + 10) + len(questions) * 3 * (FONT_SIZE + 10)
+    checked = False
+    correct_set = set()
+    moved = [False]*len(questions)
 
     while running:
         mouse_pos = pygame.mouse.get_pos()
@@ -359,8 +372,15 @@ def reading_1_section():
             question["true_rect"] = true_button
             question["false_rect"] = false_button
 
-            true_color = SELECTED_COLOR if user_answers[idx] == True else BUTTON_COLOR
-            false_color = SELECTED_COLOR if user_answers[idx] == False else BUTTON_COLOR
+            if idx in correct_set and not moved[idx]:
+                true_color = (0, 255,0) if user_answers[idx] == True else BUTTON_COLOR
+                false_color = (0, 255,0) if user_answers[idx] == False else BUTTON_COLOR
+            elif checked and not moved[idx]:
+                true_color = (255, 0, 0) if user_answers[idx] == True else BUTTON_COLOR
+                false_color = (255, 0, 0) if user_answers[idx] == False else BUTTON_COLOR
+            else:
+                true_color = READING_SELECTED_COLOR if user_answers[idx] == True else BUTTON_COLOR
+                false_color = READING_SELECTED_COLOR if user_answers[idx] == False else BUTTON_COLOR
 
             pygame.draw.rect(screen, true_color, true_button)
             pygame.draw.rect(screen, false_color, false_button)
@@ -373,8 +393,10 @@ def reading_1_section():
 
             if true_button.collidepoint(mouse_pos) and mouse_click[0]:
                 user_answers[idx] = True
+                moved[idx] = True
             if false_button.collidepoint(mouse_pos) and mouse_click[0]:
                 user_answers[idx] = False
+                moved[idx] = True
 
             y += 3 * (FONT_SIZE + 10)
 
@@ -386,12 +408,18 @@ def reading_1_section():
         check_text, check_text_rect = render_button_text("Check", font, check_button, font_hedings)
         screen.blit(check_text, check_text_rect)
 
+        screen.blit(font.render(f"Score: {len(correct_set)}/{len(moved)}", True, (0, 0, 0) if not correct_set else SELECTED_COLOR), (WINDOW_WIDTH - 100, 5))
+
         if check_button.collidepoint(mouse_pos) and button_released:
+            checked = True
             for idx, question in enumerate(questions):
                 if user_answers[idx] == question["answer"]:
                     print(f"{question['text']} - Correct")
+                    correct_set.add(idx)
                 else:
                     print(f"{question['text']} - Incorrect")
+                    correct_set.discard(idx)
+                moved[idx] = False
 
         exit_button = pygame.Rect(20, WINDOW_HEIGHT - 50, 100, 40)
         if exit_button.collidepoint(mouse_pos):
@@ -423,13 +451,14 @@ def grammar_1_section():
         {"sentence": "It _____ raining all day.", "options": ["has", "had", "is"], "correct": "has"},
         {"sentence": "I will _____ the cake tomorrow.", "options": ["make", "made", "makes"], "correct": "make"},
         {"sentence": "The children _____ in the park.", "options": ["play", "played", "playing"], "correct": "play"},
-        {"sentence": "She _____ the movie last night.", "options": ["watch", "watches", "watched"],
-         "correct": "watched"},
+        {"sentence": "She _____ the movie last night.", "options": ["watch", "watches", "watched"], "correct": "watched"},
     ]
 
     selected_options = {i: None for i in range(len(grammar_questions))}
     question_height = len(grammar_questions) * (FONT_SIZE * 4)
     active_option = None
+    correct_set = set()
+    moved = [False] * len(grammar_questions)
 
     while running:
         mouse_pos = pygame.mouse.get_pos()
@@ -455,6 +484,7 @@ def grammar_1_section():
                     for j, rect in enumerate(option_rects):
                         if rect.collidepoint(mouse_pos):
                             selected_options[i] = j
+                            moved[i] = True
 
         screen.fill(BG_COLOR)
 
@@ -462,7 +492,6 @@ def grammar_1_section():
         option_boxes = []
 
         for i, question in enumerate(grammar_questions):
-
             sentence_surface = font.render(question["sentence"], True, (0, 0, 0))
             screen.blit(sentence_surface, (20, y))
 
@@ -470,7 +499,7 @@ def grammar_1_section():
             option_rects = []
             for j, option in enumerate(question["options"]):
                 option_rect = pygame.Rect(20 + j * 200, y, 150, FONT_SIZE + 10)
-                color = SELECTED_COLOR if selected_options[i] == j else (200, 200, 200)
+                color = (GRAMMAR_SELECTED_TEXT if moved[i] else (0, 255, 0) if i in correct_set else (255, 0, 0)) if selected_options[i] == j else (200, 200, 200)
                 pygame.draw.rect(screen, color, option_rect)
 
                 option_surface = font.render(option, True, (0, 0, 0))
@@ -497,6 +526,8 @@ def grammar_1_section():
         exit_text, exit_text_rect = render_button_text("Exit", font, exit_button, font_hedings)
         screen.blit(exit_text, exit_text_rect)
 
+        screen.blit(font.render(f"Score: {len(correct_set)}/{len(moved)}", True, (0, 0, 0) if not correct_set else SELECTED_COLOR), (WINDOW_WIDTH - 100, 5))
+
         if exit_button.collidepoint(mouse_pos) and button_released:
             running = False
 
@@ -507,10 +538,13 @@ def grammar_1_section():
                     selected_text = question["options"][selected]
                     if selected_text == question["correct"]:
                         print(f"Question {i + 1}: Correct")
+                        correct_set.add(i)
                     else:
                         print(f"Question {i + 1}: Incorrect")
+                        correct_set.discard(i)
                 else:
                     print(f"Question {i + 1}: No option selected")
+                moved[i] = False
 
         pygame.display.flip()
 
@@ -532,7 +566,6 @@ def lesson_2_menu():
                 screen = pygame.display.set_mode((event.w, event.h), RESIZABLE)
                 recalculate_buttons()
 
-
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     button_released = True
@@ -547,12 +580,12 @@ def lesson_2_menu():
             "LESSON 2": (
                 WINDOW_WIDTH // 2 - button_width // 2, WINDOW_HEIGHT // 2 - 4 * button_height - button_spacing),
             "Vocabulary": (
-                WINDOW_WIDTH // 2 - button_width // 2, WINDOW_HEIGHT // 2 - 1.5 * button_height - button_spacing),
+            WINDOW_WIDTH // 2 - button_width // 2, WINDOW_HEIGHT // 2 - 1.5 * button_height - button_spacing),
             "Reading": (WINDOW_WIDTH // 2 - button_width // 2, WINDOW_HEIGHT // 2 - 0.5 * button_height),
             "Grammar": (
-                WINDOW_WIDTH // 2 - button_width // 2, WINDOW_HEIGHT // 2 + 0.5 * button_height + button_spacing),
+            WINDOW_WIDTH // 2 - button_width // 2, WINDOW_HEIGHT // 2 + 0.5 * button_height + button_spacing),
             "Exit": (
-                WINDOW_WIDTH // 2 - button_width // 2, WINDOW_HEIGHT // 2 + 1.5 * button_height + 2 * button_spacing)
+            WINDOW_WIDTH // 2 - button_width // 2, WINDOW_HEIGHT // 2 + 1.5 * button_height + 2 * button_spacing)
         }
 
         for button_text, position in lesson_buttons.items():
@@ -592,9 +625,12 @@ def vocabulary_2_section():
     scroll_y = 0
     running = True
 
-    user_inputs = {word: "" for word in VOCABULARY_1}
+    user_inputs = {word: "" for word in VOCABULARY_2}
     vocab_height = len(VOCABULARY_1) * (FONT_SIZE + 20)
     active_input = None
+    checked = False
+    correct_set = set()
+    moved = {word: False for word in VOCABULARY_2.keys()}
 
     while running:
         mouse_pos = pygame.mouse.get_pos()
@@ -623,9 +659,8 @@ def vocabulary_2_section():
                 else:
                     active_input = None
 
-
-
             elif event.type == KEYDOWN and active_input is not None:
+                moved[active_input] = True
                 if event.key == K_BACKSPACE:
                     user_inputs[active_input] = user_inputs[active_input][:-1]
                 else:
@@ -636,14 +671,15 @@ def vocabulary_2_section():
         y = scroll_y
         input_boxes = []
 
-        for word in VOCABULARY_1:
+        for word in VOCABULARY_2:
             word_surface = font.render(word, True, (0, 0, 0))
             screen.blit(word_surface, (20, y))
 
             input_rect = pygame.Rect(200, y, 200, FONT_SIZE + 10)
             pygame.draw.rect(
                 screen,
-                (255, 255, 0) if active_input == word else (200, 200, 200),
+                (0, 255, 255) if active_input == word else GRAMMAR_SELECTED_TEXT if moved[word] else (
+                200, 200, 200) if not checked else (0, 255, 0) if word in correct_set else (255, 0, 0),
                 input_rect,
             )
 
@@ -661,6 +697,9 @@ def vocabulary_2_section():
         check_text, check_text_rect = render_button_text("Check", font, check_button, font_hedings)
         screen.blit(check_text, check_text_rect)
 
+        screen.blit(font.render(f"Score: {len(correct_set)}/{len(VOCABULARY_1)}", True,
+                                (0, 0, 0) if not correct_set else SELECTED_COLOR), (WINDOW_WIDTH - 100, 5))
+
         exit_button = pygame.Rect(20, WINDOW_HEIGHT - 50, 100, 40)
         if exit_button.collidepoint(mouse_pos):
             pygame.draw.rect(screen, EXIT_HIGHLIGHT_COLOR, exit_button)
@@ -673,18 +712,22 @@ def vocabulary_2_section():
             running = False
 
         if check_button.collidepoint(mouse_pos) and button_released:
+            checked = True
             for word, correct_translation in VOCABULARY_1.items():
                 if user_inputs[word].strip().lower() == correct_translation:
                     print(f"{word}: Correct")
+                    correct_set.add(word)
                 else:
                     print(f"{word}: Incorrect")
+                    correct_set.discard(word)
+                moved[word] = False
 
         pygame.display.flip()
 
 
 def reading_2_section():
     pygame.display.set_caption("Lesson 2 Reading")
-    global screen  # Use the global screen variable
+    global screen
     scroll_y = 0
     running = True
 
@@ -704,6 +747,9 @@ def reading_2_section():
 
     user_answers = [None] * len(questions)
     content_height = len(content) * (FONT_SIZE + 10) + len(questions) * 3 * (FONT_SIZE + 10)
+    checked = False
+    correct_set = set()
+    moved = [False] * len(questions)
 
     while running:
         mouse_pos = pygame.mouse.get_pos()
@@ -743,8 +789,15 @@ def reading_2_section():
             question["true_rect"] = true_button
             question["false_rect"] = false_button
 
-            true_color = SELECTED_COLOR if user_answers[idx] == True else BUTTON_COLOR
-            false_color = SELECTED_COLOR if user_answers[idx] == False else BUTTON_COLOR
+            if idx in correct_set and not moved[idx]:
+                true_color = (0, 255, 0) if user_answers[idx] == True else BUTTON_COLOR
+                false_color = (0, 255, 0) if user_answers[idx] == False else BUTTON_COLOR
+            elif checked and not moved[idx]:
+                true_color = (255, 0, 0) if user_answers[idx] == True else BUTTON_COLOR
+                false_color = (255, 0, 0) if user_answers[idx] == False else BUTTON_COLOR
+            else:
+                true_color = READING_SELECTED_COLOR if user_answers[idx] == True else BUTTON_COLOR
+                false_color = READING_SELECTED_COLOR if user_answers[idx] == False else BUTTON_COLOR
 
             pygame.draw.rect(screen, true_color, true_button)
             pygame.draw.rect(screen, false_color, false_button)
@@ -757,8 +810,10 @@ def reading_2_section():
 
             if true_button.collidepoint(mouse_pos) and mouse_click[0]:
                 user_answers[idx] = True
+                moved[idx] = True
             if false_button.collidepoint(mouse_pos) and mouse_click[0]:
                 user_answers[idx] = False
+                moved[idx] = True
 
             y += 3 * (FONT_SIZE + 10)
 
@@ -770,12 +825,19 @@ def reading_2_section():
         check_text, check_text_rect = render_button_text("Check", font, check_button, font_hedings)
         screen.blit(check_text, check_text_rect)
 
+        screen.blit(font.render(f"Score: {len(correct_set)}/{len(moved)}", True,
+                                (0, 0, 0) if not correct_set else SELECTED_COLOR), (WINDOW_WIDTH - 100, 5))
+
         if check_button.collidepoint(mouse_pos) and button_released:
+            checked = True
             for idx, question in enumerate(questions):
                 if user_answers[idx] == question["answer"]:
                     print(f"{question['text']} - Correct")
+                    correct_set.add(idx)
                 else:
                     print(f"{question['text']} - Incorrect")
+                    correct_set.discard(idx)
+                moved[idx] = False
 
         exit_button = pygame.Rect(20, WINDOW_HEIGHT - 50, 100, 40)
         if exit_button.collidepoint(mouse_pos):
@@ -807,13 +869,14 @@ def grammar_2_section():
         {"sentence": "It _____ raining all day.", "options": ["has", "had", "is"], "correct": "has"},
         {"sentence": "I will _____ the cake tomorrow.", "options": ["make", "made", "makes"], "correct": "make"},
         {"sentence": "The children _____ in the park.", "options": ["play", "played", "playing"], "correct": "play"},
-        {"sentence": "She _____ the movie last night.", "options": ["watch", "watches", "watched"],
-         "correct": "watched"},
+        {"sentence": "She _____ the movie last night.", "options": ["watch", "watches", "watched"], "correct": "watched"},
     ]
 
     selected_options = {i: None for i in range(len(grammar_questions))}
     question_height = len(grammar_questions) * (FONT_SIZE * 4)
     active_option = None
+    correct_set = set()
+    moved = [False] * len(grammar_questions)
 
     while running:
         mouse_pos = pygame.mouse.get_pos()
@@ -839,6 +902,7 @@ def grammar_2_section():
                     for j, rect in enumerate(option_rects):
                         if rect.collidepoint(mouse_pos):
                             selected_options[i] = j
+                            moved[i] = True
 
         screen.fill(BG_COLOR)
 
@@ -846,7 +910,6 @@ def grammar_2_section():
         option_boxes = []
 
         for i, question in enumerate(grammar_questions):
-
             sentence_surface = font.render(question["sentence"], True, (0, 0, 0))
             screen.blit(sentence_surface, (20, y))
 
@@ -854,7 +917,8 @@ def grammar_2_section():
             option_rects = []
             for j, option in enumerate(question["options"]):
                 option_rect = pygame.Rect(20 + j * 200, y, 150, FONT_SIZE + 10)
-                color = SELECTED_COLOR if selected_options[i] == j else (200, 200, 200)
+                color = (GRAMMAR_SELECTED_TEXT if moved[i] else (0, 255, 0) if i in correct_set else (255, 0, 0)) if \
+                selected_options[i] == j else (200, 200, 200)
                 pygame.draw.rect(screen, color, option_rect)
 
                 option_surface = font.render(option, True, (0, 0, 0))
@@ -881,6 +945,9 @@ def grammar_2_section():
         exit_text, exit_text_rect = render_button_text("Exit", font, exit_button, font_hedings)
         screen.blit(exit_text, exit_text_rect)
 
+        screen.blit(font.render(f"Score: {len(correct_set)}/{len(moved)}", True,
+                                (0, 0, 0) if not correct_set else SELECTED_COLOR), (WINDOW_WIDTH - 100, 5))
+
         if exit_button.collidepoint(mouse_pos) and button_released:
             running = False
 
@@ -891,10 +958,13 @@ def grammar_2_section():
                     selected_text = question["options"][selected]
                     if selected_text == question["correct"]:
                         print(f"Question {i + 1}: Correct")
+                        correct_set.add(i)
                     else:
                         print(f"Question {i + 1}: Incorrect")
+                        correct_set.discard(i)
                 else:
                     print(f"Question {i + 1}: No option selected")
+                moved[i] = False
 
         pygame.display.flip()
 
@@ -914,7 +984,6 @@ while running:
             screen = pygame.display.set_mode((event.w, event.h), RESIZABLE)
             recalculate_buttons()
 
-
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 button_released = True
@@ -922,7 +991,7 @@ while running:
     screen.fill(BG_COLOR)
 
     for button_text, position in button_positions.items():
-        button_rect = pygame.Rect(position[0], position[1], button_width, button_height)
+        button_rect = pygame.Rect(position[0], position[1], button_width, button_height,)
         is_hovered = button_rect.collidepoint(mouse_pos)
 
         draw_button(screen, button_text, font, button_rect, is_hovered)
@@ -942,24 +1011,3 @@ while running:
     pygame.display.flip()
 
 pygame.quit()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
